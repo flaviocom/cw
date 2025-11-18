@@ -2348,7 +2348,7 @@ function renderHistoryList(searchTerm = '', filterType = '') {
     }
     
     historyList.innerHTML = history.map(item => `
-        <div class="history-item">
+        <div class="history-item" data-history-id="${item.id}">
             <div class="history-item-header">
                 <span class="history-item-title">${item.resellerName}</span>
                 <span class="history-item-date">${new Date(item.timestamp).toLocaleString('pt-BR')}</span>
@@ -2371,6 +2371,10 @@ function deleteHistoryItem(id) {
     if (confirm('Tem certeza que deseja deletar este pedido do histórico?')) {
         deleteOrderFromHistory(id);
         renderHistoryList();
+        const dashboardModal = document.getElementById('dashboard-modal');
+        if (dashboardModal && dashboardModal.classList.contains('show')) {
+            updateDashboard('all');
+        }
     }
 }
 
