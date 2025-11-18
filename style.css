@@ -2378,3 +2378,331 @@ main {
         font-size: 20px;
     }
 }
+
+/* ===== MELHORIAS MOBILE ADICIONAIS ===== */
+
+/* Melhorias para telas médias (tablets) */
+@media (max-width: 768px) {
+    /* Melhor espaçamento para cards de pagamento */
+    .payment-method-item {
+        min-height: auto;
+    }
+    
+    /* Inputs de pagamento mais legíveis */
+    .payment-details-input,
+    .payment-installments-input-inline,
+    .installments-input {
+        font-size: 16px !important;
+        padding: 10px !important;
+    }
+    
+    /* Labels de pagamento mais visíveis */
+    .payment-label {
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    /* Melhor visualização do prazo geral */
+    .general-deadline-label-inline {
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    
+    .general-deadline-input-inline {
+        width: 60px !important;
+        font-size: 16px !important;
+        padding: 8px !important;
+    }
+    
+    .general-deadline-date-inline {
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    
+    /* Melhor layout para header de pagamento */
+    .payment-methods-header-row {
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: flex-start;
+    }
+    
+    /* Tabela de produtos mais compacta */
+    .products-table th {
+        font-size: 11px;
+        padding: 8px 4px;
+        white-space: normal;
+        line-height: 1.2;
+    }
+    
+    .products-table td {
+        padding: 8px 4px;
+        font-size: 12px;
+    }
+    
+    /* Inputs da tabela mais acessíveis */
+    .quantity-input,
+    .discount-input,
+    .lot-input {
+        font-size: 14px !important;
+        padding: 6px !important;
+        min-width: 50px;
+    }
+    
+    /* Controles de produtos melhorados */
+    .products-controls-row {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+    
+    .search-input-wrapper {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .hide-empty-container {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .general-discount-wrapper {
+        width: 100%;
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+    }
+    
+    .general-discount-card {
+        flex: 1;
+    }
+    
+    /* Resumo do pedido mais legível */
+    .summary-item-label {
+        font-size: 13px;
+        font-weight: 600;
+    }
+    
+    .summary-item-value {
+        font-size: 15px;
+    }
+    
+    /* Embalagens mais compactas */
+    .packaging-table th,
+    .packaging-table td {
+        padding: 8px 4px;
+        font-size: 12px;
+    }
+    
+    .packaging-input {
+        font-size: 14px !important;
+        padding: 6px !important;
+    }
+    
+    /* Botões de ação mais visíveis */
+    .action-buttons {
+        padding: 16px 0;
+    }
+    
+    .btn {
+        font-weight: 600;
+        border-radius: 8px;
+    }
+    
+    /* Melhor visualização dos campos de prazo de boleto */
+    .payment-day-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .payment-day-label {
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .payment-day-input {
+        font-size: 16px !important;
+        padding: 8px !important;
+    }
+    
+    .payment-date-display {
+        font-size: 11px !important;
+    }
+}
+
+/* Melhorias para telas pequenas (smartphones) */
+@media (max-width: 480px) {
+    /* Container principal com menos padding */
+    .container {
+        padding: 0 8px;
+    }
+    
+    /* Header mais compacto */
+    .modern-header {
+        padding: 12px 8px;
+    }
+    
+    .logo {
+        height: 35px;
+    }
+    
+    .main-title {
+        font-size: 20px;
+    }
+    
+    /* Campos de formulário em coluna única */
+    .details-row {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto auto auto auto;
+    }
+    
+    .details-row .field-card:nth-child(1) { /* Telefone */
+        grid-column: 1;
+        grid-row: 1;
+    }
+    
+    .details-row .field-card:nth-child(2) { /* Frete */
+        grid-column: 1;
+        grid-row: 2;
+    }
+    
+    .details-row .field-card:nth-child(3) { /* Transporte */
+        grid-column: 1;
+        grid-row: 3;
+    }
+    
+    .details-row .field-card:nth-child(4) { /* Anotações */
+        grid-column: 1;
+        grid-row: 4;
+    }
+    
+    /* Formas de pagamento em coluna única */
+    .payment-methods-container {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto auto auto auto;
+    }
+    
+    .payment-methods-container .payment-method-item:nth-child(1) { /* PIX */
+        grid-column: 1;
+        grid-row: 1;
+    }
+    
+    .payment-methods-container .payment-method-item:nth-child(2) { /* Cartão */
+        grid-column: 1;
+        grid-row: 2;
+    }
+    
+    .payment-methods-container .payment-method-item:nth-child(3) { /* Boleto */
+        grid-column: 1;
+        grid-row: 3;
+    }
+    
+    .payment-methods-container .payment-method-item:nth-child(4) { /* Transferência */
+        grid-column: 1;
+        grid-row: 4;
+    }
+    
+    /* Tabela de produtos ainda mais compacta */
+    .products-table {
+        min-width: 550px;
+    }
+    
+    .products-table th,
+    .products-table td {
+        padding: 6px 2px;
+        font-size: 11px;
+    }
+    
+    .quantity-input,
+    .discount-input,
+    .lot-input {
+        width: 45px !important;
+        font-size: 13px !important;
+        padding: 4px !important;
+    }
+    
+    /* Botões menores mas ainda clicáveis */
+    .btn {
+        padding: 12px;
+        font-size: 14px;
+    }
+    
+    /* Scroll buttons menores */
+    .scroll-btn {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .scroll-arrow {
+        font-size: 14px;
+    }
+    
+    /* Campos de input com tamanho mínimo para evitar zoom */
+    input,
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+    
+    /* Melhor espaçamento entre seções */
+    .products-section,
+    .packaging-section,
+    .summary-section {
+        margin-bottom: 20px;
+    }
+    
+    /* Header de pagamento mais compacto */
+    .payment-methods-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .general-deadline-input-inline {
+        width: 70px !important;
+    }
+}
+
+/* Melhorias de touch para todos os dispositivos móveis */
+@media (max-width: 768px) {
+    /* Áreas de toque maiores para checkboxes */
+    .payment-checkbox {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+    
+    /* Labels clicáveis maiores */
+    .payment-label {
+        cursor: pointer;
+        padding: 4px 0;
+    }
+    
+    /* Botões com área de toque adequada */
+    button,
+    .btn {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+    
+    /* Melhor feedback visual em toques */
+    button:active,
+    .btn:active {
+        transform: scale(0.98);
+        transition: transform 0.1s;
+    }
+    
+    /* Inputs com altura mínima para toque */
+    input,
+    select,
+    textarea {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+    
+    /* Scroll suave em containers */
+    .products-table-container {
+        scroll-behavior: smooth;
+    }
+}

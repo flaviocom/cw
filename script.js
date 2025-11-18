@@ -709,7 +709,7 @@ function setupEventListeners() {
             copySettlementValue();
         }
         if (e.target.id === 'save-order-btn') {
-            saveOrderAsImage();
+            saveOrderConsolidated();
         }
         if (e.target.id === 'print-order-btn') {
             if (orderState.resellerName.trim()) {
@@ -1039,7 +1039,20 @@ function copySettlementValue() {
     const settlementValueElement = document.getElementById('settlement-value');
     if (settlementValueElement) {
         const rawValue = settlementValueElement.textContent.trim();
-        const textToCopy = `Valor do acerto: ${rawValue}`;
+        
+        // Calcular data de acerto (data do pedido + prazo geral)
+        const orderDateElement = document.getElementById('order-date');
+        const generalDeadlineDaysInput = document.getElementById('general-deadline-days');
+        
+        let settlementDateText = '';
+        if (orderDateElement && orderDateElement.value && generalDeadlineDaysInput && generalDeadlineDaysInput.value) {
+            const orderDate = new Date(orderDateElement.value + 'T00:00:00');
+            const days = parseInt(generalDeadlineDaysInput.value) || 0;
+            const settlementDate = new Date(orderDate.getTime() + days * 24 * 60 * 60 * 1000);
+            settlementDateText = `\nAcerto até dia: ${settlementDate.toLocaleDateString('pt-BR')}`;
+        }
+        
+        const textToCopy = `Valor do acerto: ${rawValue}${settlementDateText}`;
         navigator.clipboard.writeText(textToCopy).then(() => {
             // Sem alerta de confirmação
             console.log(`Texto copiado: ${textToCopy}`);
@@ -2659,11 +2672,4 @@ document.addEventListener('DOMContentLoaded', function() {
     setupRowHighlight();
 });
 
-// Modificar o botão de salvar para usar o salvamento consolidado
-document.addEventListener('DOMContentLoaded', function() {
-    const saveOrderBtn = document.getElementById('save-order-btn');
-    if (saveOrderBtn) {
-        saveOrderBtn.removeEventListener('click', saveOrderAsImage);
-        saveOrderBtn.addEventListener('click', saveOrderConsolidated);
-    }
-});
+// Botão de salvar já configurado no event listener principal (linha 711-713)
