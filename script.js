@@ -712,6 +712,9 @@ function setupEventListeners() {
             saveOrderAsImage();
         }
         if (e.target.id === 'print-order-btn') {
+            if (orderState.resellerName.trim()) {
+                saveOrderToHistory(orderState);
+            }
             printOrderAsPDF();
         }
         if (e.target.id === 'add-new-product-btn') {
@@ -724,9 +727,15 @@ function setupEventListeners() {
             clearQuantities();
         }
         if (e.target.id === 'export-excel-btn') {
+            if (orderState.resellerName.trim()) {
+                saveOrderToHistory(orderState);
+            }
             exportToExcel();
         }
         if (e.target.id === 'expedition-btn') {
+            if (orderState.resellerName.trim()) {
+                saveOrderToHistory(orderState);
+            }
             printExpeditionAsPDF();
         }
         if (e.target.id === 'add-transport-btn') {
@@ -1566,6 +1575,7 @@ function removeAdditionalProduct(index) {
 }
 
 function normalizeText(text) {
+    if (typeof text !== 'string') return '';
     return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
@@ -2102,3 +2112,554 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
+
+
+// ===== HISTÓRICO DE PEDIDOS =====
+const HISTORY_STORAGE_KEY = 'pedidos-historico';
+
+function getOrderHistory() {
+    const history = localStorage.getItem(HISTORY_STORAGE_KEY);
+    return history ? JSON.parse(history) : [];
+}
+
+function saveOrderToHistory(orderData) {
+    const history = getOrderHistory();
+    const timestamp = new Date().toISOString();
+    
+    const historyEntry = {
+        id: timestamp,
+        timestamp: timestamp,
+        date: orderData.orderDate || new Date().toISOString().split('T')[0],
+        resellerName: orderData.resellerName,
+        attendanceBy: orderData.attendanceBy,
+        finalValue: calculateFinalValue(),
+        profit: calculateProfit(),
+        settlementValue: calculateSettlementValue(),
+        totalQuantity: calculateTotalQuantity(),
+        orderData: JSON.parse(JSON.stringify(orderData)) // Deep copy
+    };
+    
+    history.unshift(historyEntry); // Adicionar no início
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+    
+    return historyEntry;
+}
+
+function deleteOrderFromHistory(id) {
+    const history = getOrderHistory();
+    const filteredHistory = history.filter(item => item.id !== id);
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(filteredHistory));
+}
+
+function loadOrderFromHistory(id) {
+    const history = getOrderHistory();
+    const entry = history.find(item => item.id === id);
+    
+    if (entry) {
+        orderState = JSON.parse(JSON.stringify(entry.orderData));
+        renderProductsTable();
+        renderPackagingTable();
+        updateSummary();
+        updatePaymentDates();
+        renderPaymentDaysInputs();
+        updateInstallmentsText();
+        
+        // Atualizar campos da interface
+        document.getElementById('reseller-name').value = orderState.resellerName;
+        document.getElementById('address').value = orderState.address;
+        document.getElementById('phone').value = orderState.phone;
+        document.getElementById('attendance-by').value = orderState.attendanceBy;
+        document.getElementById('order-date').value = orderState.orderDate;
+        document.getElementById('freight').value = orderState.freight;
+        document.getElementById('general-discount').value = orderState.generalDiscount;
+        document.getElementById('credit-paid').value = orderState.creditPaid;
+        document.getElementById('notes').value = orderState.notes;
+        document.getElementById('transport-select').value = orderState.transportOption;
+        document.getElementById('general-deadline-days').value = orderState.generalDeadlineDays;
+        document.getElementById('installments').value = orderState.installments;
+        document.getElementById('payment-credit-installments').value = orderState.paymentMethods.credit.installments;
+        
+        // Atualizar checkboxes de pagamento
+        document.getElementById('payment-pix').checked = orderState.paymentMethods.pix.enabled;
+        document.getElementById('payment-credit').checked = orderState.paymentMethods.credit.enabled;
+        document.getElementById('payment-boleto').checked = orderState.paymentMethods.boleto.enabled;
+        document.getElementById('payment-transfer').checked = orderState.paymentMethods.transfer.enabled;
+        
+        document.getElementById('payment-pix-details').value = orderState.paymentMethods.pix.details;
+        document.getElementById('payment-transfer-details').value = orderState.paymentMethods.transfer.details;
+        
+        updateGeneralDeadlineDate();
+        updateTransportDisplay();
+        saveData();
+        
+        closeHistoryModal();
+        scrollToTop();
+    }
+}
+
+// ===== SALVAMENTO CONSOLIDADO =====
+function saveOrderConsolidated() {
+    // Validar dados básicos
+    if (!orderState.resellerName.trim()) {
+        alert('Por favor, preencha o nome do cliente antes de salvar.');
+        document.getElementById('reseller-name').focus();
+        return;
+    }
+    
+    // Salvar no histórico
+    saveOrderToHistory(orderState);
+    
+    // Gerar JPEG
+    saveOrderAsImage();
+    
+    alert('Pedido salvo no histórico e exportado como imagem com sucesso!');
+}
+
+// ===== ATALHOS DE TECLADO =====
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+S ou Cmd+S para salvar
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            saveOrderConsolidated();
+        }
+        
+        // Delete para limpar valor em campos de quantidade/desconto
+        if (e.key === 'Delete') {
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.classList.contains('quantity-input') || 
+                                   activeElement.classList.contains('discount-input') ||
+                                   activeElement.classList.contains('additional-product-quantity-input') ||
+                                   activeElement.classList.contains('additional-product-discount-input'))) {
+                activeElement.value = '';
+                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+        
+        // Enter para confirmar em campos de quantidade/desconto
+        if (e.key === 'Enter') {
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.classList.contains('quantity-input') || 
+                                   activeElement.classList.contains('discount-input') ||
+                                   activeElement.classList.contains('additional-product-quantity-input') ||
+                                   activeElement.classList.contains('additional-product-discount-input'))) {
+                // Mover para o próximo campo
+                const inputs = Array.from(document.querySelectorAll('.quantity-input, .discount-input, .additional-product-quantity-input, .additional-product-discount-input'));
+                const currentIndex = inputs.indexOf(activeElement);
+                if (currentIndex < inputs.length - 1) {
+                    inputs[currentIndex + 1].focus();
+                    inputs[currentIndex + 1].select();
+                }
+            }
+        }
+    });
+}
+
+// Realce de linha em edição
+function setupRowHighlight() {
+    const table = document.getElementById('products-tbody');
+    if (!table) return;
+    
+    table.addEventListener('focus', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+            const row = e.target.closest('tr');
+            if (row) {
+                // Remover destaque de outras linhas
+                document.querySelectorAll('.products-table tbody tr.active-row').forEach(r => {
+                    r.classList.remove('active-row');
+                });
+                // Adicionar destaque à linha atual
+                row.classList.add('active-row');
+            }
+        }
+    }, true);
+    
+    table.addEventListener('blur', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+            const row = e.target.closest('tr');
+            if (row) {
+                row.classList.remove('active-row');
+            }
+        }
+    }, true);
+}
+
+// ===== MODAL DE HISTÓRICO =====
+function openHistoryModal() {
+    const modal = document.getElementById('history-modal');
+    if (modal) {
+        modal.classList.add('show');
+        renderHistoryList();
+    }
+}
+
+function closeHistoryModal() {
+    const modal = document.getElementById('history-modal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+function renderHistoryList(searchTerm = '', filterType = '') {
+    const historyList = document.getElementById('history-list');
+    if (!historyList) return;
+    
+    let history = getOrderHistory();
+    
+    // Aplicar filtro de data
+    if (filterType) {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        history = history.filter(item => {
+            const itemDate = new Date(item.date);
+            const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+            
+            switch (filterType) {
+                case 'today':
+                    return itemDateOnly.getTime() === today.getTime();
+                case 'week':
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    return itemDateOnly >= weekAgo;
+                case 'month':
+                    const monthAgo = new Date(today);
+                    monthAgo.setMonth(monthAgo.getMonth() - 1);
+                    return itemDateOnly >= monthAgo;
+                default:
+                    return true;
+            }
+        });
+    }
+    
+    // Aplicar busca
+    if (searchTerm) {
+        const normalizedSearch = normalizeText(searchTerm);
+        history = history.filter(item => {
+            return normalizeText(item.resellerName).includes(normalizedSearch) ||
+                   normalizeText(item.attendanceBy).includes(normalizedSearch) ||
+                   item.date.includes(searchTerm);
+        });
+    }
+    
+    if (history.length === 0) {
+        historyList.innerHTML = '<div class="history-empty">Nenhum pedido encontrado</div>';
+        return;
+    }
+    
+    historyList.innerHTML = history.map(item => `
+        <div class="history-item">
+            <div class="history-item-header">
+                <span class="history-item-title">${item.resellerName}</span>
+                <span class="history-item-date">${new Date(item.timestamp).toLocaleString('pt-BR')}</span>
+            </div>
+            <div class="history-item-details">
+                <div><strong>Atendente:</strong> ${item.attendanceBy}</div>
+                <div><strong>Data:</strong> ${new Date(item.date).toLocaleDateString('pt-BR')}</div>
+                <div><strong>Valor:</strong> ${formatCurrency(item.finalValue)}</div>
+                <div><strong>Lucro:</strong> ${formatCurrency(item.profit)}</div>
+            </div>
+            <div class="history-item-actions">
+                <button class="btn btn-primary" onclick="loadOrderFromHistory('${item.id}')">📂 Carregar</button>
+                <button class="btn btn-danger" onclick="deleteHistoryItem('${item.id}')">🗑️ Deletar</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function deleteHistoryItem(id) {
+    if (confirm('Tem certeza que deseja deletar este pedido do histórico?')) {
+        deleteOrderFromHistory(id);
+        renderHistoryList();
+    }
+}
+
+// ===== MODAL DE DASHBOARD =====
+function openDashboardModal() {
+    const modal = document.getElementById('dashboard-modal');
+    if (modal) {
+        modal.classList.add('show');
+        updateDashboard('all');
+    }
+}
+
+function closeDashboardModal() {
+    const modal = document.getElementById('dashboard-modal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+function updateDashboard(period = 'all') {
+    let history = getOrderHistory();
+    
+    // Filtrar por período
+    if (period !== 'all') {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        history = history.filter(item => {
+            const itemDate = new Date(item.date);
+            const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+            
+            switch (period) {
+                case 'today':
+                    return itemDateOnly.getTime() === today.getTime();
+                case 'week':
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    return itemDateOnly >= weekAgo;
+                case 'month':
+                    const monthAgo = new Date(today);
+                    monthAgo.setMonth(monthAgo.getMonth() - 1);
+                    return itemDateOnly >= monthAgo;
+                default:
+                    return true;
+            }
+        });
+    }
+    
+    // Calcular métricas
+    const totalSales = history.reduce((sum, item) => sum + item.finalValue, 0);
+    const totalProfit = history.reduce((sum, item) => sum + item.profit, 0);
+    const orderCount = history.length;
+    const avgTicket = orderCount > 0 ? totalSales / orderCount : 0;
+    
+    // Atualizar cards
+    document.getElementById('dashboard-total-sales').textContent = formatCurrency(totalSales);
+    document.getElementById('dashboard-order-count').textContent = orderCount;
+    document.getElementById('dashboard-avg-ticket').textContent = formatCurrency(avgTicket);
+    document.getElementById('dashboard-total-profit').textContent = formatCurrency(totalProfit);
+    
+    // Atualizar gráficos
+    updateSalesChart(history);
+    updateProductsChart(history);
+}
+
+function updateSalesChart(history) {
+    const ctx = document.getElementById('sales-chart');
+    if (!ctx) return;
+    
+    // Agrupar vendas por data
+    const salesByDate = {};
+    history.forEach(item => {
+        const date = new Date(item.date).toLocaleDateString('pt-BR');
+        salesByDate[date] = (salesByDate[date] || 0) + item.finalValue;
+    });
+    
+    const labels = Object.keys(salesByDate).reverse();
+    const data = labels.map(label => salesByDate[label]);
+    
+    // Destruir gráfico anterior se existir
+    if (window.salesChart) {
+        window.salesChart.destroy();
+    }
+    
+    window.salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Vendas (R$)',
+                data: data,
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateProductsChart(history) {
+    const ctx = document.getElementById('products-chart');
+    if (!ctx) return;
+    
+    // Contar quantidade de produtos vendidos
+    const productSales = {};
+    history.forEach(item => {
+        item.orderData.products.forEach(product => {
+            if (product.quantity > 0) {
+                productSales[product.name] = (productSales[product.name] || 0) + product.quantity;
+            }
+        });
+        item.orderData.additionalProducts.forEach(product => {
+            if (product.quantity > 0) {
+                productSales[product.name] = (productSales[product.name] || 0) + product.quantity;
+            }
+        });
+    });
+    
+    // Ordenar e pegar top 10
+    const sorted = Object.entries(productSales)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+    
+    const labels = sorted.map(item => item[0].substring(0, 20) + (item[0].length > 20 ? '...' : ''));
+    const data = sorted.map(item => item[1]);
+    
+    // Destruir gráfico anterior se existir
+    if (window.productsChart) {
+        window.productsChart.destroy();
+    }
+    
+    window.productsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Quantidade Vendida',
+                data: data,
+                backgroundColor: '#28a745',
+                borderColor: '#218838',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ===== INICIALIZAÇÃO =====
+// Modificar a função saveOrderAsImage para usar o salvamento consolidado
+const originalSaveOrderAsImage = saveOrderAsImage;
+saveOrderAsImage = function() {
+    const fileName = generateFileName();
+    if (!fileName) return;
+
+    const printContent = createPrintableContent();
+    
+    html2canvas(printContent, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `${fileName}.jpg`;
+        link.href = canvas.toDataURL('image/jpeg', 0.9);
+        link.click();
+        
+        document.body.removeChild(printContent);
+        console.log('Imagem salva com sucesso!');
+    }).catch(error => {
+        console.error('Erro ao gerar imagem:', error);
+        document.body.removeChild(printContent);
+        alert('Erro ao gerar imagem. Verifique se todas as bibliotecas estão carregadas.');
+    });
+};
+
+// Adicionar event listeners para os botões de histórico e dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    const historyBtn = document.getElementById('history-btn');
+    const dashboardBtn = document.getElementById('dashboard-btn');
+    const historyModalClose = document.getElementById('history-modal-close');
+    const dashboardModalClose = document.getElementById('dashboard-modal-close');
+    const historySearch = document.getElementById('history-search');
+    const historyFilter = document.getElementById('history-filter');
+    const dashboardPeriod = document.getElementById('dashboard-period');
+    
+    if (historyBtn) {
+        historyBtn.addEventListener('click', openHistoryModal);
+    }
+    
+    if (dashboardBtn) {
+        dashboardBtn.addEventListener('click', openDashboardModal);
+    }
+    
+    if (historyModalClose) {
+        historyModalClose.addEventListener('click', closeHistoryModal);
+    }
+    
+    if (dashboardModalClose) {
+        dashboardModalClose.addEventListener('click', closeDashboardModal);
+    }
+    
+    if (historySearch) {
+        historySearch.addEventListener('input', function() {
+            renderHistoryList(this.value, document.getElementById('history-filter').value);
+        });
+    }
+    
+    if (historyFilter) {
+        historyFilter.addEventListener('change', function() {
+            renderHistoryList(document.getElementById('history-search').value, this.value);
+        });
+    }
+    
+    if (dashboardPeriod) {
+        dashboardPeriod.addEventListener('change', function() {
+            updateDashboard(this.value);
+        });
+    }
+    
+    // Fechar modais ao clicar fora deles
+    const historyModal = document.getElementById('history-modal');
+    const dashboardModal = document.getElementById('dashboard-modal');
+    
+    if (historyModal) {
+        historyModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHistoryModal();
+            }
+        });
+    }
+    
+    if (dashboardModal) {
+        dashboardModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDashboardModal();
+            }
+        });
+    }
+    
+    // Inicializar atalhos de teclado e realce de linha
+    setupKeyboardShortcuts();
+    setupRowHighlight();
+});
+
+// Modificar o botão de salvar para usar o salvamento consolidado
+document.addEventListener('DOMContentLoaded', function() {
+    const saveOrderBtn = document.getElementById('save-order-btn');
+    if (saveOrderBtn) {
+        saveOrderBtn.removeEventListener('click', saveOrderAsImage);
+        saveOrderBtn.addEventListener('click', saveOrderConsolidated);
+    }
+});
